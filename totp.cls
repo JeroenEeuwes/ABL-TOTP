@@ -1,535 +1,590 @@
- 
+
 /*------------------------------------------------------------------------
    File        : totp
-   Purpose     : 
-   Syntax      : 
-   Description : 
+   Purpose     :
+   Syntax      :
+   Description :
    Author(s)   : James
    Created     : Sat Sep 17 11:39:02 NZST 2022
-   Notes       : 
+   Notes       : https://github.com/Jimbobnz/ABL-TOTP/tree/main
  ----------------------------------------------------------------------*/
 
-using Progress.Lang.*.
+USING Progress.Lang.*.
 
-block-level on error undo, throw.
+BLOCK-LEVEL ON ERROR UNDO, THROW.
 
-class src.totp final: 
+CLASS System.cls.totp FINAL:
 
-    define public property secretKey as character no-undo 
-        get.
-        private set. 
+    DEFINE PUBLIC PROPERTY secretKey AS CHARACTER NO-UNDO
+        GET.
+        PRIVATE SET.
 
-    define public property step as integer initial 30 no-undo 
-        get.
-        private set. 
-    
-    define public property totpSize as integer initial 6 no-undo 
-        get.
-        private set.
-        
-    define public property hashMode as character initial 'HMAC-SHA-1' no-undo 
-        get.
-        private set.     
+    DEFINE PUBLIC PROPERTY step AS INTEGER INITIAL 30 NO-UNDO
+        GET.
+        PRIVATE SET.
 
-    /*------------------------------------------------------------------------------
-     Purpose:
-     Notes:
-    ------------------------------------------------------------------------------*/
-        
-    constructor public totp (input secretKey as character  ):
-        super ().
-        
-        this-object:secretKey = secretKey.
-        
-    end constructor.
-    
-    constructor public totp (input secretKey as character, input step as integer  ):
-        super ().
-        
-        this-object:secretKey = secretKey.
-        this-object:step      = step.
+    DEFINE PUBLIC PROPERTY totpSize AS INTEGER INITIAL 6 NO-UNDO
+        GET.
+        PRIVATE SET.
 
-        
-    end constructor.
-    
-    constructor public totp (input secretKey as character, input step as integer, input totpSize as integer ):
-        super ().
-        
-        this-object:secretKey = secretKey.
-        this-object:step      = step.
-        this-object:totpSize  = totpSize.
-        
-    end constructor.
-    
-    constructor public totp (input secretKey as character, input step as integer, input totpSize as integer, input hashMode as character  ):
-        super ().
-        
-        this-object:secretKey = secretKey.
-        this-object:step      = step.
-        this-object:totpSize  = totpSize.
-        this-object:hashMode  = hashMode.
-        
-    end constructor.
+    DEFINE PUBLIC PROPERTY hashMode AS CHARACTER INITIAL 'HMAC-SHA-1' NO-UNDO
+        GET.
+        PRIVATE SET.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer arithmeticLeftShift( input x as integer, input z as integer):
+    CONSTRUCTOR PUBLIC totp (INPUT secretKey AS CHARACTER  ):
+        SUPER ().
 
-    
-        define variable ishift as integer no-undo.
-        define variable y      as integer no-undo.
-    
-        do ishift = 1 to z:
-    
-            put-bits(y, 2, 31) = get-bits(x, 1, 31).   
-            put-bits(y, 1, 1)  = 0.  // The empty position in the least significant bit is filled with a zero.
-    
+        THIS-OBJECT:secretKey = secretKey.
+
+    END CONSTRUCTOR.
+
+    CONSTRUCTOR PUBLIC totp (INPUT secretKey AS CHARACTER, INPUT step AS INTEGER  ):
+        SUPER ().
+
+        THIS-OBJECT:secretKey = secretKey.
+        THIS-OBJECT:step      = step.
+
+
+    END CONSTRUCTOR.
+
+    CONSTRUCTOR PUBLIC totp (INPUT secretKey AS CHARACTER, INPUT step AS INTEGER, INPUT totpSize AS INTEGER ):
+        SUPER ().
+
+        THIS-OBJECT:secretKey = secretKey.
+        THIS-OBJECT:step      = step.
+        THIS-OBJECT:totpSize  = totpSize.
+
+    END CONSTRUCTOR.
+
+    CONSTRUCTOR PUBLIC totp (INPUT secretKey AS CHARACTER, INPUT step AS INTEGER, INPUT totpSize AS INTEGER, INPUT hashMode AS CHARACTER  ):
+        SUPER ().
+
+        THIS-OBJECT:secretKey = secretKey.
+        THIS-OBJECT:step      = step.
+        THIS-OBJECT:totpSize  = totpSize.
+        THIS-OBJECT:hashMode  = hashMode.
+
+    END CONSTRUCTOR.
+
+    /*------------------------------------------------------------------------------
+     Purpose:
+     Notes:
+    ------------------------------------------------------------------------------*/
+
+    METHOD PRIVATE INTEGER arithmeticLeftShift( INPUT x AS INTEGER, INPUT z AS INTEGER):
+
+
+        DEFINE VARIABLE ishift AS INTEGER NO-UNDO.
+        DEFINE VARIABLE y      AS INTEGER NO-UNDO.
+
+        DO ishift = 1 TO z:
+
+            PUT-BITS(y, 2, 31) = GET-BITS(x, 1, 31).
+            PUT-BITS(y, 1, 1)  = 0.  // The empty position in the least significant bit is filled with a zero.
+
             x = y.
-    
-        end.
-    
-        return x.
-    end method.
+
+        END.
+
+        RETURN x.
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private int64 arithmeticLeftShift64(input x as int64, input z as integer):
+    METHOD PRIVATE INT64 arithmeticLeftShift64(INPUT x AS INT64, INPUT z AS INTEGER):
 
-    
-        define variable ishift as integer no-undo.
-        define variable y      as int64   no-undo.
-    
-        do ishift = 1 to z:
-    
-            put-bits(y, 2, 31) = get-bits(x, 1, 31).   
-            put-bits(y, 1, 1)  = 0.  // The empty position in the least significant bit is filled with a zero.
-    
+
+        DEFINE VARIABLE ishift AS INTEGER NO-UNDO.
+        DEFINE VARIABLE y      AS INT64   NO-UNDO.
+
+        DO ishift = 1 TO z:
+
+            PUT-BITS(y, 2, 31) = GET-BITS(x, 1, 31).
+            PUT-BITS(y, 1, 1)  = 0.  // The empty position in the least significant bit is filled with a zero.
+
             x = y.
-    
-        end.
-    
-        return x.
 
-    end method.
+        END.
+
+        RETURN x.
+
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer arithmeticRightShift( input x as integer, input z as integer):
+    METHOD PRIVATE INTEGER arithmeticRightShift( INPUT x AS INTEGER, INPUT z AS INTEGER):
 
-        define variable ishift as integer no-undo.
-        define variable y      as integer no-undo.
-    
-        do ishift = 1 to z:
-    
-            put-bits(y, 32, 1) = get-bits(x, 32, 1).   //The empty position in the most significant bit is filled with a copy of the original MSB
-            put-bits(y, 1, 31) = get-bits(x, 2, 31).
-    
+        DEFINE VARIABLE ishift AS INTEGER NO-UNDO.
+        DEFINE VARIABLE y      AS INTEGER NO-UNDO.
+
+        DO ishift = 1 TO z:
+
+            PUT-BITS(y, 32, 1) = GET-BITS(x, 32, 1).   //The empty position in the most significant bit is filled with a copy of the original MSB
+            PUT-BITS(y, 1, 31) = GET-BITS(x, 2, 31).
+
             x = y.
-    
-        end.
-    
-        return x.
 
-    end method.
+        END.
+
+        RETURN x.
+
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private memptr base32Decode( input base32EncodedValue as character):
+    METHOD PRIVATE MEMPTR base32Decode( INPUT base32EncodedValue AS CHARACTER):
 
-        define variable returnArray       as memptr    no-undo.
-    
-        define variable chCharByte        as character no-undo.
-    
-        define variable iValue            as integer   no-undo.    
-        define variable characterPosition as integer   no-undo.
-        define variable iLength           as integer   no-undo.
-        define variable iByteCount        as integer   no-undo.
-        define variable iBitsRemaining    as integer   no-undo.
-        define variable iMask             as integer   no-undo. 
-        define variable iCurrentByte      as integer   no-undo.
-        define variable bytePosition      as integer   no-undo.
-    
-        set-byte-order(returnArray ) = big-endian.
-     
-        if base32EncodedValue eq "" then
-            return ?.
-    
-        assign
-            base32EncodedValue = replace(base32EncodedValue,' ','')
-            base32EncodedValue = replace(base32EncodedValue,'=','')
-            base32EncodedValue = trim(base32EncodedValue)
+        DEFINE VARIABLE returnArray       AS MEMPTR    NO-UNDO.
+
+        DEFINE VARIABLE chCharByte        AS CHARACTER NO-UNDO.
+
+        DEFINE VARIABLE iValue            AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE characterPosition AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE iLength           AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE iByteCount        AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE iBitsRemaining    AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE iMask             AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE iCurrentByte      AS INTEGER   NO-UNDO.
+        DEFINE VARIABLE bytePosition      AS INTEGER   NO-UNDO.
+
+        set-byte-order(returnArray ) = BIG-ENDIAN.
+
+        IF base32EncodedValue EQ "" THEN
+            RETURN ?.
+
+        ASSIGN
+            base32EncodedValue = REPLACE(base32EncodedValue,' ','')
+            base32EncodedValue = REPLACE(base32EncodedValue,'=','')
+            base32EncodedValue = TRIM(base32EncodedValue)
             .
-        
-        assign    
-            iLength    = length(base32EncodedValue,"RAW")   
-            iByteCount = truncate(iLength * 5 / 8,0)
+
+        ASSIGN
+            iLength    = LENGTH(base32EncodedValue,"RAW")
+            iByteCount = TRUNCATE(iLength * 5 / 8,0)
             .
-    
-        set-size(returnArray ) = 0.
-        set-size(returnArray ) = iByteCount.     
-    
-        assign
+
+        SET-SIZE(returnArray ) = 0.
+        SET-SIZE(returnArray ) = iByteCount.
+
+        ASSIGN
             iBitsRemaining = 8
             iMask          = 0
             iCurrentByte   = 0
             bytePosition   = 0
             .
-    
-        do characterPosition = 1 to iLength:
-    
-            chCharByte = substring(base32EncodedValue, characterPosition, 1, "RAW").
-        
-            iValue = this-object:charToValue(input chCharByte).
-        
-            if iValue eq ? then
-                next.
-        
-            if iBitsRemaining gt 5 then
-            do:
-                assign
-                    iMask          = this-object:arithmeticLeftShift(iValue , (iBitsRemaining - 5) )
-                    iCurrentByte   = this-object:bitOR(iCurrentByte, iMask)
+
+        DO characterPosition = 1 TO iLength:
+
+            chCharByte = SUBSTRING(base32EncodedValue, characterPosition, 1, "RAW").
+
+            iValue = THIS-OBJECT:charToValue(INPUT chCharByte).
+
+            IF iValue EQ ? THEN
+                NEXT.
+
+            IF iBitsRemaining GT 5 THEN
+            DO:
+                ASSIGN
+                    iMask          = THIS-OBJECT:arithmeticLeftShift(iValue , (iBitsRemaining - 5) )
+                    iCurrentByte   = THIS-OBJECT:bitOR(iCurrentByte, iMask)
                     iBitsRemaining = iBitsRemaining - 5
                     .
-            
-            end.
-            else
-            do:
-            
-                assign
-                    iMask        = this-object:arithmeticRightShift(iValue , (5 - iBitsRemaining) )
-                    iCurrentByte = this-object:bitOR(iCurrentByte, iMask)
+
+            END.
+            ELSE
+            DO:
+
+                ASSIGN
+                    iMask        = THIS-OBJECT:arithmeticRightShift(iValue , (5 - iBitsRemaining) )
+                    iCurrentByte = THIS-OBJECT:bitOR(iCurrentByte, iMask)
                     bytePosition = bytePosition + 1
                     .
 
                 put-byte(returnArray, bytePosition) = iCurrentByte.
-            
-                assign
-                    iCurrentByte = this-object:arithmeticLeftShift(iValue , (3 + iBitsRemaining) ).
+
+                ASSIGN
+                    iCurrentByte = THIS-OBJECT:arithmeticLeftShift(iValue , (3 + iBitsRemaining) ).
                 iBitsRemaining = iBitsRemaining + 3
-                    .        
-            end.
-        end.
-    
-        if bytePosition ne iByteCount then
-        do:
+                    .
+            END.
+        END.
+
+        IF bytePosition NE iByteCount THEN
+        DO:
             bytePosition  = bytePosition + 1.
             put-byte(returnArray, bytePosition) = iCurrentByte.
-        
-        end.
-    
-        return returnArray.
-    
-        finally:
-    
-            set-size(returnArray) = 0.
-    
-        end finally.
 
-    end method.
+        END.
+
+        RETURN returnArray.
+
+        FINALLY:
+
+            SET-SIZE(returnArray) = 0.
+
+        END FINALLY.
+
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer bitAnd( input X as integer, input Y as integer):
+    METHOD PRIVATE INTEGER bitAnd( INPUT X AS INTEGER, INPUT Y AS INTEGER):
 
-        define variable b as integer no-undo.
-        define variable n as integer no-undo.
-        define variable Z as integer no-undo.
+        DEFINE VARIABLE b AS INTEGER NO-UNDO.
+        DEFINE VARIABLE n AS INTEGER NO-UNDO.
+        DEFINE VARIABLE Z AS INTEGER NO-UNDO.
 
-        do n = 1 to 32:
+        DO n = 1 TO 32:
 
-            if get-bits(X, n, 1) = 1 and get-bits(Y, n, 1) = 1 then
+            IF GET-BITS(X, n, 1) = 1 AND get-bits(Y, n, 1) = 1 THEN
                 b = 1.
 
             PUT-BITS(Z, n, 1) = b.
             b = 0.
 
-        end.
+        END.
 
-        return Z.
-    end method.
+        RETURN Z.
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private int64 bitAnd64( input X as int64, input Y as int64):
+    METHOD PRIVATE INT64 bitAnd64( INPUT X AS INT64, INPUT Y AS INT64):
 
-        define variable b as integer no-undo.
-        define variable n as integer no-undo.
-        define variable Z as int64   no-undo.
+        DEFINE VARIABLE b AS INTEGER NO-UNDO.
+        DEFINE VARIABLE n AS INTEGER NO-UNDO.
+        DEFINE VARIABLE Z AS INT64   NO-UNDO.
 
-        do n = 1 to 64:
+        DO n = 1 TO 64:
 
-            if get-bits(X, n, 1) = 1 and get-bits(Y, n, 1) = 1 then
+            IF GET-BITS(X, n, 1) = 1 AND get-bits(Y, n, 1) = 1 THEN
                 b = 1.
 
             PUT-BITS(Z, n, 1) = b.
             b = 0.
 
-        end.
+        END.
 
-        return Z.   
-    end method.
+        RETURN Z.
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer bitOR( input X as integer, input Y as integer):
+    METHOD PRIVATE INTEGER bitOR( INPUT X AS INTEGER, INPUT Y AS INTEGER):
 
-        define variable n as integer no-undo.
-        define variable Z as integer no-undo.
+        DEFINE VARIABLE n AS INTEGER NO-UNDO.
+        DEFINE VARIABLE Z AS INTEGER NO-UNDO.
 
-        do n = 1 to 32:
+        DO n = 1 TO 32:
 
-            if get-bits(X, n, 1) = 1 or get-bits(Y, n, 1) = 1 then
+            IF GET-BITS(X, n, 1) = 1 OR get-bits(Y, n, 1) = 1 THEN
                 PUT-BITS(Z, n, 1) = 1.
 
-        end.
+        END.
 
-        return Z.
+        RETURN Z.
 
-    end method.
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private int64 bitOR64(input X as int64, input Y as int64):
+    METHOD PRIVATE INT64 bitOR64(INPUT X AS INT64, INPUT Y AS INT64):
 
-        define variable n as integer no-undo.
-        define variable Z as int64   no-undo.
+        DEFINE VARIABLE n AS INTEGER NO-UNDO.
+        DEFINE VARIABLE Z AS INT64   NO-UNDO.
 
-        do n = 1 to 64:
+        DO n = 1 TO 64:
 
-            if get-bits(X, n, 1) eq 1 or get-bits(Y, n, 1) eq 1 then
+            IF GET-BITS(X, n, 1) EQ 1 OR get-bits(Y, n, 1) EQ 1 THEN
                 PUT-BITS(Z, n, 1) = 1.
 
-        end.
+        END.
 
-        return Z.
+        RETURN Z.
 
-    end method.
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private int64 calculateTimeStepFromTimestamp( input Timestamp as int64 ):
-        
+    METHOD PRIVATE INT64 calculateTimeStepFromTimestamp( INPUT Timestamp AS INT64 ):
+
 /*        define variable TimeStep as integer no-undo.         */
 /*                                                             */
 /*        TimeStep = truncate(Timestamp / this-object:step, 0).*/
-        
-        return int64(truncate(Timestamp / this-object:step, 0)) .
 
-    end method.
+        RETURN INT64(TRUNCATE(Timestamp / THIS-OBJECT:step, 0)) .
+
+    END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer charToValue(  input charByte as character):
+    METHOD PRIVATE INTEGER charToValue(  INPUT charByte AS CHARACTER):
 
-        define variable charByteValue as integer no-undo.
-             
-        charByteValue = asc(charByte).
+        DEFINE VARIABLE charByteValue AS INTEGER NO-UNDO.
+
+        charByteValue = ASC(charByte).
 
     //65-90 == uppercase letters
-        if charByteValue lt 91 and charByteValue gt 64 then
-            return charByteValue - 65.
-    
+        IF charByteValue LT 91 AND charByteValue GT 64 THEN
+            RETURN charByteValue - 65.
+
     //50-55 == numbers 2-7
-        if charByteValue lt 56 and charByteValue gt 49 then
-            return charByteValue - 24.
-    
+        IF charByteValue LT 56 AND charByteValue GT 49 THEN
+            RETURN charByteValue - 24.
+
     //97-122 == lowercase letters
-        if(charByteValue lt 123 and charByteValue gt 96) then
-            return charByteValue - 97.
+        IF(charByteValue LT 123 AND charByteValue GT 96) THEN
+            RETURN charByteValue - 97.
 
-        return ?.
+        RETURN ?.
 
-    end method.
+    END METHOD.
 
-    /*------------------------------------------------------------------------------
-     Purpose:
-     Notes:
-    ------------------------------------------------------------------------------*/
 
-    method public character ComputeTotp(  ):
-        
-        define variable timestamp   as int64     no-undo.
-        define variable timeStep    as integer   no-undo.
-        define variable TOTPCode    as integer   no-undo.
-        
-        define variable hashResult  as memptr    no-undo.
-        define variable counterMempr     as memptr    no-undo.
-        define variable secretKeyMempr   as memptr    no-undo.
-    
-        define variable computeTotp as character no-undo.
-        
-        this-object:verifyParameters().
-        
-        set-byte-order(hashResult) = big-endian.
-        set-byte-order(counterMempr)    = big-endian.
-        set-byte-order(secretKeyMempr)  = big-endian.
+  METHOD PUBLIC LOGICAL CheckTotp
+    (INPUT  pcTotp    AS CHARACTER      ):
 
-        set-size(hashResult) = 0.
-        set-size(secretKeyMempr)  = 0. 
-        set-size(counterMempr)    = 0.
-        set-size(counterMempr)    = 8. // 8 bytes = 64 bits         
-        
-        timestamp   = this-object:unixTime().
-            
-        timeStep    = this-object:calculateTimeStepFromTimestamp(input timestamp).    
-        
-        put-int64(counterMempr,1) = timeStep.
-                
-        secretKeyMempr   = this-object:base32decode(input this-object:secretKey).
-        
-        hashResult  = message-digest(this-object:hashMode, counterMempr, secretKeyMempr ) .   
-        
-        TOTPCode    = this-object:dyanmicTruncate(input  hashResult).
-        
-        computeTotp = string(TOTPCode, "99999999").
-        
-        computeTotp = substring( computeTotp, (length(computeTotp) - this-object:totpSize) + 1, this-object:totpSize ).
-            
-        return computeTotp.
-        
-        finally:
-            
-            //set-size(hashResult) = 0.
-            //set-size(secretkey)  = 0. 
-            //set-size(counter)    = 0.
-            
-        end finally.
+    RETURN THIS-OBJECT:CheckTotp(pcTotp, 1). /* Default check for +/- 1 code; this means that both slow typing and (small) differences in time are allowed */
 
-    end method.
+  END METHOD.
+
+
+  METHOD PUBLIC LOGICAL CheckTotp
+    (INPUT  pcTotp    AS CHARACTER
+    ,INPUT  piExtra   AS INTEGER        ):
+
+    /* Check if the manually entered TOTP is valid. piExtra is the number of codes (up and down) that are allowed */
+
+    IF LENGTH(pcTotp) NE THIS-OBJECT:totpSize
+    THEN RETURN FALSE.
+
+    IF LOOKUP(pcTotp, THIS-OBJECT:GenerateTotpList(piExtra)) GT 0
+    THEN RETURN TRUE.
+    ELSE RETURN FALSE.
+
+  END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private integer dyanmicTruncate( input hashResult as memptr ):
-        
-        define variable byteOffset    as integer no-undo.
-        define variable bytePosition  as integer no-undo.
-    
-        define variable truncatedHash as integer no-undo.
-        define variable inBinary      as int64   no-undo.
-    
-        assign
-            byteOffset = get-byte(hashResult, 20)     //Get the last byte 
-            byteOffset = this-object:bitAnd(byteOffset, 0x0F)     //get the last 4 bits
+    METHOD PUBLIC CHARACTER ComputeTotp(  ):
+
+      RETURN THIS-OBJECT:GenerateTotpList(0).
+
+    END METHOD.
+
+    /*------------------------------------------------------------------------------
+     Purpose:
+     Notes:
+    ------------------------------------------------------------------------------*/
+
+    METHOD PRIVATE INTEGER dynamicTruncate( INPUT hashResult AS MEMPTR ):
+
+        DEFINE VARIABLE byteOffset    AS INTEGER NO-UNDO.
+        DEFINE VARIABLE bytePosition  AS INTEGER NO-UNDO.
+
+        DEFINE VARIABLE truncatedHash AS INTEGER NO-UNDO.
+        DEFINE VARIABLE inBinary      AS INT64   NO-UNDO.
+
+        ASSIGN
+            byteOffset = GET-BYTE(hashResult, 20)     //Get the last byte
+            byteOffset = THIS-OBJECT:bitAnd(byteOffset, 0x0F)     //get the last 4 bits
             .
-    
+
         inBinary = 0.
-    
-        do bytePosition = 1 to 4:
-    
-            assign
-                inBinary = this-object:arithmeticLeftShift64(inBinary , 8)
-                inBinary = this-object:bitOR64(inBinary, get-byte(hashResult, byteOffset + bytePosition) )
+
+        DO bytePosition = 1 TO 4:
+
+            ASSIGN
+                inBinary = THIS-OBJECT:arithmeticLeftShift64(inBinary , 8)
+                inBinary = THIS-OBJECT:bitOR64(inBinary, GET-BYTE(hashResult, byteOffset + bytePosition) )
                 .
-    
-        end.
-    
-        assign
-            inBinary      = this-object:bitAnd64(inBinary, 0x7FFFFFFF)
-            truncatedHash = inBinary mod 0xF4240
+
+        END.
+
+        ASSIGN
+            inBinary      = THIS-OBJECT:bitAnd64(inBinary, 0x7FFFFFFF)
+            truncatedHash = inBinary MOD 0xF4240
             .
-    
-        return truncatedHash.
 
-    end method.
+        RETURN truncatedHash.
+
+    END METHOD.
+
+
+  METHOD PRIVATE CHARACTER GenerateTotp( ):
+    RETURN GenerateTotpList(0).
+  END METHOD.
+
+
+  METHOD PRIVATE CHARACTER GenerateTotpList
+    (INPUT piExtra    AS INTEGER   ):
+
+    DEFINE VARIABLE timestamp       AS INT64     NO-UNDO.
+    DEFINE VARIABLE timeStep        AS INTEGER   NO-UNDO.
+    DEFINE VARIABLE timeStepLoop    AS INTEGER   NO-UNDO.
+    DEFINE VARIABLE TOTPCode        AS INTEGER   NO-UNDO.
+    DEFINE VARIABLE hashResult      AS MEMPTR    NO-UNDO.
+    DEFINE VARIABLE counterMemptr   AS MEMPTR    NO-UNDO.
+    DEFINE VARIABLE secretKeyMemptr AS MEMPTR    NO-UNDO.
+    DEFINE VARIABLE computeTotp     AS CHARACTER NO-UNDO.
+    DEFINE VARIABLE iLoop           AS INTEGER   NO-UNDO.
+    DEFINE VARIABLE cTotpList       AS CHARACTER NO-UNDO.
+    DEFINE VARIABLE iLoopMultiply   AS INTEGER   NO-UNDO.
+
+    THIS-OBJECT:verifyParameters().
+
+    SET-BYTE-ORDER(hashResult)      = BIG-ENDIAN.
+    SET-BYTE-ORDER(counterMemptr)    = BIG-ENDIAN.
+    SET-BYTE-ORDER(secretKeyMemptr)  = BIG-ENDIAN.
+
+    SET-SIZE(hashResult)      = 0.
+    SET-SIZE(secretKeyMemptr)  = 0.
+    SET-SIZE(counterMemptr)    = 0.
+    SET-SIZE(counterMemptr)    = 8. // 8 bytes = 64 bits
+
+    ASSIGN
+      secretKeyMemptr = THIS-OBJECT:base32decode(INPUT THIS-OBJECT:secretKey)
+      timestamp       = THIS-OBJECT:unixTime()
+      timeStep        = THIS-OBJECT:calculateTimeStepFromTimestamp(INPUT timestamp)
+      .
+
+    DO iLoop = 1 TO 1 + (2 * piExtra):
+      IF iLoop GT 1
+      THEN DO:
+        IF iLoop MOD 2 EQ 0
+        THEN ASSIGN
+              iLoopMultiply = (iLoop - 0) / 2
+              timeStepLoop = timeStep - (1 * iLoopMultiply)
+              .
+        ELSE ASSIGN
+               iLoopMultiply = (iLoop - 1) / 2
+               timeStepLoop = timeStep + (1 * iLoopMultiply)
+               .
+      END.
+      ELSE timeStepLoop = timeStep.
+
+      PUT-INT64(counterMemptr,1) = timeStepLoop.
+
+      ASSIGN
+        hashResult  = MESSAGE-DIGEST(THIS-OBJECT:hashMode, counterMemptr, secretKeyMemptr)
+        TOTPCode    = THIS-OBJECT:dynamicTruncate(INPUT  hashResult)
+        computeTotp = STRING(TOTPCode, "99999999")
+        computeTotp = SUBSTRING( computeTotp, (LENGTH(computeTotp) - THIS-OBJECT:totpSize) + 1, THIS-OBJECT:totpSize )
+        cTotpList   = IF cTotpList EQ "" THEN computeTotp ELSE cTotpList + "," + computeTotp
+        .
+    END.
+
+    RETURN cTotpList.
+
+    FINALLY:
+
+      //SET-SIZE(hashResult) = 0.
+      //SET-SIZE(secretkey)  = 0.
+      //SET-SIZE(counter)    = 0.
+
+    END FINALLY.
+
+  END METHOD.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method public integer remainingSeconds(  ):
-        
-        define variable remainingSeconds as integer no-undo.
+    METHOD PUBLIC INTEGER remainingSeconds(  ):
 
-        assign
-            remainingSeconds = time mod 60    
-            remainingSeconds = (30 - (remainingSeconds mod 30)).
+        DEFINE VARIABLE remainingSeconds AS INTEGER NO-UNDO.
 
-        return remainingSeconds.
+        ASSIGN
+            remainingSeconds = TIME MOD 60
+            remainingSeconds = (30 - (remainingSeconds MOD 30)).
 
-    end method.
+        RETURN remainingSeconds.
 
+    END METHOD.
 
-    /*------------------------------------------------------------------------------
-     Purpose:
-     Notes:
-    ------------------------------------------------------------------------------*/
-
-    method private int64 unixTime(  ):
-        
-        define variable localTime     as datetime-tz no-undo.
-        define variable utcTime       as datetime-tz no-undo.
-        define variable epocTime      as datetime-tz no-undo.
-        define variable unixTime      as integer     no-undo.
-        define variable timeremaining as integer     no-undo.
-    
-        assign
-            epocTime  = datetime-tz(1,1,1970,0,0,0,0,0) // Epoch  
-            localTime = now                             // local time of the current machine 
-            utcTime   = datetime-tz(localTime, 0)       // Convert the localtime to UTC +00:00
-            unixTime  = interval( utcTime, epocTime, 'seconds' )
-            .        
-    
-        return unixTime.
-
-    end method.
 
     /*------------------------------------------------------------------------------
      Purpose:
      Notes:
     ------------------------------------------------------------------------------*/
 
-    method private void verifyParameters(  ):
-        
-        if  not (this-object:step > 0) then 
-            return error new Progress.Lang.AppError("Step must be a positive value" ). 
-                
-        if not (this-object:totpSize > 0) then
-            return error new Progress.Lang.AppError("totpSize must be a positive value" ).
-            
-        if not (this-object:totpSize <= 10) then
-            return error new Progress.Lang.AppError("totpSize must be less or equal to 10" ).
-        
-        return.
+    METHOD PRIVATE INT64 unixTime(  ):
 
-    end method.
+        DEFINE VARIABLE localTime     AS DATETIME-TZ NO-UNDO.
+        DEFINE VARIABLE utcTime       AS DATETIME-TZ NO-UNDO.
+        DEFINE VARIABLE epocTime      AS DATETIME-TZ NO-UNDO.
+        DEFINE VARIABLE unixTime      AS INTEGER     NO-UNDO.
+        DEFINE VARIABLE timeremaining AS INTEGER     NO-UNDO.
 
-    destructor public totp ( ):
+        ASSIGN
+            epocTime  = DATETIME-TZ(1,1,1970,0,0,0,0,0) // Epoch
+            localTime = NOW                             // local time of the current machine
+            utcTime   = DATETIME-TZ(localTime, 0)       // Convert the localtime to UTC +00:00
+            unixTime  = INTERVAL( utcTime, epocTime, 'seconds' )
+            .
 
-    end destructor.
+        RETURN unixTime.
 
-end class.
+    END METHOD.
+
+    /*------------------------------------------------------------------------------
+     Purpose:
+     Notes:
+    ------------------------------------------------------------------------------*/
+
+    METHOD PRIVATE VOID verifyParameters(  ):
+
+        IF  NOT (THIS-OBJECT:step > 0) THEN
+            RETURN ERROR NEW Progress.Lang.AppError("Step must be a positive value" ).
+
+        IF NOT (THIS-OBJECT:totpSize > 0) THEN
+            RETURN ERROR NEW Progress.Lang.AppError("totpSize must be a positive value" ).
+
+        IF NOT (THIS-OBJECT:totpSize <= 10) THEN
+            RETURN ERROR NEW Progress.Lang.AppError("totpSize must be less or equal to 10" ).
+
+        RETURN.
+
+    END METHOD.
+
+    DESTRUCTOR PUBLIC totp ( ):
+
+    END DESTRUCTOR.
+
+END CLASS.
